@@ -1,0 +1,68 @@
+<html lang="en">
+  <head>
+    <title>Interface</title>
+    <meta charset="utf-8">
+    <link rel="shortcut icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAABMLAAATCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZwI1BmQHML9SABmBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHYtSQ8AAAAAAAAAAGUAMrFnADT/ZAAwgQAAAAAAAAAAAAAAAHAlQBJIAAsbTwAUHwAAAAAAAAAASQAMZnAnQIFwGUHWbAo8/2wKPP9mADP/ZgAz/2wKPP9sCjz/bAo8/2wKPP9sCjz/bAo8/2wKPP8AAAAAAAAAAFUAHD1TABqHZwI0G2cANWtmADP/ZgAz/2UAMv9tCTz0ayA5sV4AKChgACwhbgk+FXIlQgMAAAAAAAAAAAAAAABkADAxZBExEIQ2XDdoBDf1ZQAy/2YAM/9lADL/bgw++3QkRhEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFcCIARgBizAZwA1/2YAM/9mADP/ZAAx/3QZRriFM14GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABoBzYIZQAy92YAM/9mADP/ZgAz/2YAM/9nATR4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAn1+AQGkGN/hlADH/ZgAz/2YAM/9mADP/ZQAyggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApmmICIc1XsBiAS//ZgAz/2YAM/9lADL/aQU3/pFGbHkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG8cQBBqDDj4ZQAy/2YAM/9mADP/ZgAz/2YDNPmBMFYXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABOABUPWwAl8GgANf9mADP/ZgAz/2gANv9ZACHARQAHBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfjRTD3EZQvBkADH/ZgAz/2YAM/9mADPxZQAxPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAQQQ9rBzrwZQAy/2YAM/9mADP/ZgAziAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABlADEPZQAy8GQAMP9lADL/ZQAy/mQAMHcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaAA1D2kDNvl0GEbybQo88GwKPPp1GUcYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFcAHxhsCjz/iTliFm8WPyVsCjz/hzZfCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/z8vvf4/ob3gAI697B/GvPg/hDvwP9g78H8FvfA/i73gfw+94H9tPOB/pD3g/9s94P/KPeH/dD3h/2e67f8kvQ==">
+    </style>
+  </head>
+  <body>
+    <div id="connection" style="height:40px;"></div>
+    <div id="trace0" style="height:40px;"></div>
+    <div id="trace1" style="height:40px;"></div>
+    <div id="trace2" style="height:40px;"></div>
+    <div id="trace3" style="height:40px;"></div>
+    <div id="trace4" style="height:40px;"></div>
+    <div id="trace5" style="height:40px;"></div>
+    <div id="trace6" style="height:40px;"></div>
+    <div id="trace7" style="height:40px;"></div>
+    <div id="trace8" style="height:40px;"></div>
+    <div id="trace9" style="height:40px;"></div>
+    <hr>
+    <script>
+var trace_name_to_number = {}
+var trace_name_to_value = {}
+
+var server = "http://192.168.1.253:80/"
+const evtSource = new EventSource(server);
+
+evtSource.onopen = function(m) {
+  document.getElementById("connection").innerHTML = '<p>Connected</p>';
+  for (let i = 0; i < 10; ++i) {
+    document.getElementById("trace" + i).innerHTML = '<p>Empty</p>';
+  }
+}
+
+evtSource.onerror = function(m) {
+    document.getElementById("connection").innerHTML = "<pre>Error: " + JSON.stringify(m) + "</pre>";
+    evtSource.close();
+  }
+
+for (let i = 0; i < 10; ++i) {
+    evtSource.addEventListener("trace" + i, function(m) {
+        let parts = m.data.split("=");
+        let name = parts[0];
+        let value = parts[1];
+        trace_name_to_number[name] = i;
+        trace_name_to_number[name] = value;
+        document.getElementById("trace" + i).innerHTML = "<p>" + name + " is " + value + "</p>";
+    });
+}
+
+evtSource.onmessage = function(m) {
+    console.log(m.data);
+}
+
+// Send a POST message before leaving this page to tell the server
+// side to disconnect
+window.addEventListener("beforeunload", closeAll, false);
+function closeAll() {
+  evtSource.close();
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", server, false);
+  try {
+    xhr.send(null);
+  } catch (e) {}
+}
+    </script>
+  </body>
+</html>

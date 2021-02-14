@@ -1,0 +1,5 @@
+{
+    "board": "arduino:samd:mkrwifi1010",
+    "sketch": "rocket_telemetry.ino",
+    "port": "COM9"
+}
