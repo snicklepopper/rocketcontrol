@@ -4,7 +4,8 @@
 // Arduino Wifi library
 #include <WiFiNINA.h>
 
-#define MAX_TRACES 10
+#define MAX_TRACES 20
+#define MAX_BUTTONS 5
 
 
 struct AsyncWebserver {
@@ -19,7 +20,13 @@ struct AsyncWebserver {
     // Integers to trace
     String                  m_trace_names[MAX_TRACES];      // Names of traces
     unsigned                m_trace_count;                  // Number of traces
-    int                     m_trace_values[MAX_TRACES];     // Values of trace
+    String                  m_trace_values[MAX_TRACES];     // Values of trace
+
+    // Buttons to click
+    typedef String (*action_fn)();
+    String                  m_button_names[MAX_BUTTONS];    // Names of buttons
+    unsigned                m_button_count;                 // Number of buttons
+    action_fn               m_button_functions[MAX_BUTTONS];// Button handlers
 
     // Send trace information to the SSE connection
     void send_trace(
@@ -47,15 +54,26 @@ public:
         const char*         webpage,    // (I) Web page
         const size_t        webpage_siz);// (I) Size of web page
 
-    // Add an integer trace
-    unsigned add_trace_int(
+    // Add a trace
+    unsigned add_trace(
         const String&       name,       // (I) Name of the trace
         int                 value);     // (I) Initial value
+    unsigned add_trace(
+        const String&       name,       // (I) Name of the trace
+        float               value);     // (I) Initial value
 
-    // Set an integer trace
-    void set_trace_int(
+    // Set a trace
+    void set_trace(
         unsigned            index,      // (I) Number of the trace
         int                 value);     // (I) New value
+    void set_trace(
+        unsigned            index,      // (I) Number of the trace
+        float               value);     // (I) New value
+
+    // Add a button
+    void add_button(
+        const String&       name,       // (I) Name of the action
+        action_fn           fn);        // (I) Function to call on click
 
     // Poll
     void poll();

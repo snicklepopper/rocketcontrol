@@ -2,22 +2,58 @@
   <head>
     <title>Interface</title>
     <meta charset="utf-8">
-    <link rel="shortcut icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAABMLAAATCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZwI1BmQHML9SABmBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHYtSQ8AAAAAAAAAAGUAMrFnADT/ZAAwgQAAAAAAAAAAAAAAAHAlQBJIAAsbTwAUHwAAAAAAAAAASQAMZnAnQIFwGUHWbAo8/2wKPP9mADP/ZgAz/2wKPP9sCjz/bAo8/2wKPP9sCjz/bAo8/2wKPP8AAAAAAAAAAFUAHD1TABqHZwI0G2cANWtmADP/ZgAz/2UAMv9tCTz0ayA5sV4AKChgACwhbgk+FXIlQgMAAAAAAAAAAAAAAABkADAxZBExEIQ2XDdoBDf1ZQAy/2YAM/9lADL/bgw++3QkRhEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFcCIARgBizAZwA1/2YAM/9mADP/ZAAx/3QZRriFM14GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABoBzYIZQAy92YAM/9mADP/ZgAz/2YAM/9nATR4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAn1+AQGkGN/hlADH/ZgAz/2YAM/9mADP/ZQAyggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApmmICIc1XsBiAS//ZgAz/2YAM/9lADL/aQU3/pFGbHkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG8cQBBqDDj4ZQAy/2YAM/9mADP/ZgAz/2YDNPmBMFYXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABOABUPWwAl8GgANf9mADP/ZgAz/2gANv9ZACHARQAHBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfjRTD3EZQvBkADH/ZgAz/2YAM/9mADPxZQAxPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAQQQ9rBzrwZQAy/2YAM/9mADP/ZgAziAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABlADEPZQAy8GQAMP9lADL/ZQAy/mQAMHcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaAA1D2kDNvl0GEbybQo88GwKPPp1GUcYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFcAHxhsCjz/iTliFm8WPyVsCjz/hzZfCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/z8vvf4/ob3gAI697B/GvPg/hDvwP9g78H8FvfA/i73gfw+94H9tPOB/pD3g/9s94P/KPeH/dD3h/2e67f8kvQ==">
+    <style>
+body {
+  font-family: Arial;
+}
+div.fullwidth {
+  width: 100%;
+}
+div.status {
+  border: 1px solid #bbb;
+  height: 40px;
+  margin: 5;
+  padding: 4;
+  width: calc(100vw - 10);
+}
+div.ok {
+  background: #dfd;
+}
+div.error {
+  background: #fdd;
+}
+div.trace {
+  background: #ddf;
+  border: 1pt solid #bbf;
+  display: inline-block;
+  height: 40px;
+  margin: 5;
+  padding: 4;
+  width: 250px;
+}
+div.button {
+  background: #ccc;
+  border: 1pt solid #999;
+  display: inline-block;
+  height: 40px;
+  margin: 5;
+  padding: 4;
+  width: 250px;
+}
+div.response {
+  border: 1px solid #bbb;
+  min-height: 40px;
+  margin: 5;
+  padding: 4;
+  width: calc(100vw - 10);
+}
     </style>
   </head>
   <body>
-    <div id="connection" style="height:40px;"></div>
-    <div id="trace0" style="height:40px;"></div>
-    <div id="trace1" style="height:40px;"></div>
-    <div id="trace2" style="height:40px;"></div>
-    <div id="trace3" style="height:40px;"></div>
-    <div id="trace4" style="height:40px;"></div>
-    <div id="trace5" style="height:40px;"></div>
-    <div id="trace6" style="height:40px;"></div>
-    <div id="trace7" style="height:40px;"></div>
-    <div id="trace8" style="height:40px;"></div>
-    <div id="trace9" style="height:40px;"></div>
-    <hr>
+    <div id="connection" class="status"></div>
+    <div id="buttons" class="fullwidth"></div>
+    <div id="traces" class="fullwidth"></div>
+    <div id="response" class="fullwidth response"></div>
     <script>
 var trace_name_to_number = {}
 var trace_name_to_value = {}
@@ -25,32 +61,87 @@ var trace_name_to_value = {}
 var server = "http://192.168.1.253:80/"
 const evtSource = new EventSource(server);
 
+// Create a handler called when the SSE connection is made
 evtSource.onopen = function(m) {
-  document.getElementById("connection").innerHTML = '<p>Connected</p>';
-  for (let i = 0; i < 10; ++i) {
-    document.getElementById("trace" + i).innerHTML = '<p>Empty</p>';
-  }
+	let condiv = document.getElementById("connection");
+	condiv.className = "status ok";
+	condiv.innerHTML = '<p>Connected</p>';
+	for (let i = 0; i < 32; ++i) {
+		let tracediv = document.getElementById("trace" + i);
+		if (tracediv) tracediv.remove();
+	}
 }
 
+// Create a handler for connection errors
 evtSource.onerror = function(m) {
-    document.getElementById("connection").innerHTML = "<pre>Error: " + JSON.stringify(m) + "</pre>";
-    evtSource.close();
-  }
+	let condiv = document.getElementById("connection");
+	condiv.className = "status error";
+	condiv.innerHTML = "<pre>Error: " + JSON.stringify(m) + "</pre>";
+	evtSource.close();
+}
 
-for (let i = 0; i < 10; ++i) {
-    evtSource.addEventListener("trace" + i, function(m) {
+// Create handlers for each trace
+for (let i = 0; i < 32; ++i) {
+	let traceId = "trace" + i;
+    evtSource.addEventListener(traceId, function(m) {
         let parts = m.data.split("=");
         let name = parts[0];
         let value = parts[1];
         trace_name_to_number[name] = i;
         trace_name_to_number[name] = value;
-        document.getElementById("trace" + i).innerHTML = "<p>" + name + " is " + value + "</p>";
+		let traceDiv = document.getElementById(traceId);
+		if (!traceDiv) {
+			traceDiv = document.createElement("div");
+			traceDiv.className = "trace";
+			traceDiv.id = traceId;
+			document.getElementById("traces").appendChild(traceDiv);
+		}
+        traceDiv.innerHTML = "<p>" + name + " is <b>" + value + "</b></p>";
     });
 }
 
+// Create a message handler
 evtSource.onmessage = function(m) {
     console.log(m.data);
 }
+
+// Function called to click buttons
+function handleClickButton(name) {
+    xhr.open('GET', server + name, false);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4) {
+            if (xhr.status == 200) {
+                var data = xhr.responseText;
+                let responseDiv = document.getElementById("response");
+                responseDiv.innerHTML = "<span>" + data + "</span>";
+            }
+        }
+    };
+    xhr.send(null);
+}
+
+// Ask the server what buttonts it supports
+var xhr = new XMLHttpRequest();
+xhr.open('GET', server + "buttons", false);
+xhr.onreadystatechange = function () {
+    if (xhr.readyState == 4) {
+        if (xhr.status == 200) {
+            var data = xhr.responseText;
+            for (let line of data.split("\n")) {
+                if (line.trim().length > 0) {
+                  buttonDiv = document.createElement("div");
+                  buttonDiv.className = "button";
+                  buttonDiv.id = line;
+                  buttonDiv.innerHTML = "<p>" + line + "</p>";
+                  buttonDiv.onclick = () => { handleClickButton(line); }
+                  document.getElementById("buttons").appendChild(buttonDiv);
+                }
+            }
+            console.log(data);
+        }
+    }
+};
+xhr.send(null);
 
 // Send a POST message before leaving this page to tell the server
 // side to disconnect

@@ -4,6 +4,17 @@
 #include "my_trace.h"
 
 
+// 404 error
+void error_404(
+    WiFiClient&         client)     // (I) Client connection
+{
+    client.println("HTTP/1.1 404 Not Found");
+    client.println("Content-Type: text/plain; charset=utf-8");
+    client.println("Access-Control-Allow-Origin: *");
+    client.println("\n404 Not Found\n");
+    client.stop();
+}
+
 AsyncWebserver::AsyncWebserver(
     const IPAddress&    ipAddress,  // (I) IP Address
     const char*         ssid,       // (I) Wifi access point name
@@ -20,14 +31,36 @@ AsyncWebserver::AsyncWebserver(
 
 
 // Add an integer trace
-unsigned AsyncWebserver::add_trace_int(
+unsigned AsyncWebserver::add_trace(
     const String&       name,       // (I) Name of the trace
     int                 value)      // (I) Initial value
 {
     // Store the new value
     if (m_trace_count < MAX_TRACES - 1) {
         m_trace_names[m_trace_count] = name;
-        m_trace_values[m_trace_count] = value;
+        m_trace_values[m_trace_count] = String(value);
+        Sprintln("Added trace for " + String(name) + " as #" + String(m_trace_count) + ".");
+        unsigned index = m_trace_count;
+        m_trace_count++;
+        return index;
+    } 
+    else
+    {
+        Sprintln("Could not create trace for " + String(name) + ".  Too many active traces.");
+        return -1;
+    }
+}
+
+
+// Add a floating point trace
+unsigned AsyncWebserver::add_trace(
+    const String&       name,       // (I) Name of the trace
+    float               value)      // (I) Initial value
+{
+    // Store the new value
+    if (m_trace_count < MAX_TRACES - 1) {
+        m_trace_names[m_trace_count] = name;
+        m_trace_values[m_trace_count] = String(value);
         Sprintln("Added trace for " + String(name) + " as #" + String(m_trace_count) + ".");
         unsigned index = m_trace_count;
         m_trace_count++;
@@ -42,13 +75,28 @@ unsigned AsyncWebserver::add_trace_int(
 
 
 // Set an integer trace
-void AsyncWebserver::set_trace_int(
+void AsyncWebserver::set_trace(
     unsigned            index,      // (I) Number of the trace
     int                 value)      // (I) New value
 {
     // Store the new value
     if (index < m_trace_count) {
-        m_trace_values[index] = value;
+        m_trace_values[index] = String(value);
+    }
+
+    // Send a server-side event to the client if we have one
+    send_trace(index);
+}
+
+
+// Set a floating point trace
+void AsyncWebserver::set_trace(
+    unsigned            index,      // (I) Number of the trace
+    float               value)      // (I) New value
+{
+    // Store the new value
+    if (index < m_trace_count) {
+        m_trace_values[index] = String(value);
     }
 
     // Send a server-side event to the client if we have one
@@ -62,6 +110,7 @@ void AsyncWebserver::send_trace(
 {
     // Send a server-side event to the client if we have one
     if (m_ssePort.connected()) {
+        Sprintln("data: " + m_trace_names[index] + "=" + String(m_trace_values[index]));
         m_ssePort.print("event: trace" + String(index) + "\n");
         m_ssePort.print("data: " + m_trace_names[index] + "=" + String(m_trace_values[index]) + "\n\n");
     }
@@ -283,21 +332,87 @@ void AsyncWebserver::service_http_connection(
                 {
                     // They want to know the author
                     client.println("HTTP/1.1 200 OK");
-                    client.println("Content-Type: text/plain; charset=utf-8")
+                    client.println("Content-Type: text/plain; charset=utf-8");
                     client.println("Access-Control-Allow-Origin: *");
                     client.println("\nDavid Tonge, david.tonge@davidtonge.com\n");
                     client.stop();
                     Sprintln("--Email address sent; client disconnected");
                 } 
+                else if (header.startsWith("GET "))
+                {
+                    // Page request
+                    String page = header.substring(5);
+                    page = page.substring(0, page.indexOf(" "));
+                    Sprintln("REQUEST FOR PAGE >" + page + "<");
+
+                    // Is this a request for teh button list?
+                    bool handled = false;
+                    if (page == "buttons") 
+                    {
+                        client.println("HTTP/1.1 200 OK");
+                        client.println("Content-Type: text/plain; charset=utf-8");
+                        client.println("Access-Control-Allow-Origin: *");
+                        client.println("\n");
+                        for (unsigned i=0; i<m_button_count; ++i)
+                            client.println(m_button_names[i]);
+                        client.stop();
+                        handled = true;
+                    }
+                    else
+                    {
+                        // Find the function for the button with this name
+                        for (unsigned i=0; i<m_button_count; ++i)
+                        {
+                            Sprintln("Checking " + String(i) + ":" + m_button_names[i] + " for " + page);
+                            if (m_button_names[i] == page) 
+                            {
+                                String result = m_button_functions[i]();
+                                client.println("HTTP/1.1 200 OK");
+                                client.println("Content-Type: text/plain; charset=utf-8");
+                                client.println("Access-Control-Allow-Origin: *");
+                                client.println("\n");
+                                client.println(result);
+                                client.stop();
+                                handled = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // No idea what they want?
+                    if (!handled) 
+                    {
+                        error_404(client);
+                        Sprintln("--Page not found; client disconnected");
+                    }
+                }
                 else 
                 {
                     // No idea what they want
-                    client.println("HTTP/1.1 404 Not Found\nContent-Type: text/plain; charset=utf-8\n\n404 Not Found\n");
-                    client.stop();
+                    error_404(client);
                     Sprintln("--Page not found; client disconnected");
                 }
             }
         }
+    }
+}
+
+
+// Add a button
+typedef String (*action_fn)();
+void AsyncWebserver::add_button(
+    const String&       name,       // (I) Name of the action
+    action_fn           fn)         // (I) Function to call on click
+{
+    if (m_button_count < MAX_BUTTONS - 1) 
+    {
+        m_button_functions[m_button_count] = fn;
+        m_button_names[m_button_count] = name;
+        ++m_button_count;
+    }
+    else
+    {
+        Sprintln("Cannot add handler for " + name + " as already have too many buttons.");
     }
 }
 
