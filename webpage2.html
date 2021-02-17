@@ -58,6 +58,32 @@ div.response {
 var trace_name_to_number = {}
 var trace_name_to_value = {}
 
+// Function called to click buttons
+function handleClickButton(name) {
+    xhr.open('GET', server + name, false);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4) {
+            if (xhr.status == 200) {
+                var data = xhr.responseText;
+                let responseDiv = document.getElementById("response");
+                responseDiv.innerHTML = "<span>" + data + "</span>";
+            }
+        }
+    };
+    xhr.send(null);
+}
+
+// Function called to handle event stream errors
+function handleSSEerror(err) {
+  console.error("SSE error occurred.")
+  console.error(err);
+
+	let condiv = document.getElementById("connection");
+	condiv.className = "status error";
+	condiv.innerHTML = "Connection error";
+}
+
+
 var server = "http://192.168.1.253:80/"
 const evtSource = new EventSource(server);
 
@@ -73,12 +99,7 @@ evtSource.onopen = function(m) {
 }
 
 // Create a handler for connection errors
-evtSource.onerror = function(m) {
-	let condiv = document.getElementById("connection");
-	condiv.className = "status error";
-	condiv.innerHTML = "<pre>Error: " + JSON.stringify(m) + "</pre>";
-	evtSource.close();
-}
+evtSource.onerror = handleSSEerror;
 
 // Create handlers for each trace
 for (let i = 0; i < 32; ++i) {
@@ -103,21 +124,6 @@ for (let i = 0; i < 32; ++i) {
 // Create a message handler
 evtSource.onmessage = function(m) {
     console.log(m.data);
-}
-
-// Function called to click buttons
-function handleClickButton(name) {
-    xhr.open('GET', server + name, false);
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState == 4) {
-            if (xhr.status == 200) {
-                var data = xhr.responseText;
-                let responseDiv = document.getElementById("response");
-                responseDiv.innerHTML = "<span>" + data + "</span>";
-            }
-        }
-    };
-    xhr.send(null);
 }
 
 // Ask the server what buttonts it supports
