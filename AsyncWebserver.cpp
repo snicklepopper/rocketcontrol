@@ -155,6 +155,10 @@ void AsyncWebserver::wifi_connect()
         Sprint("Connected to " + String(m_ssid));
         wifi_print_status();
         m_httpServer.begin();
+    } 
+    else
+    {
+      Sprintln("Failed to connect.");
     }
 
     // Switch down to low-power mode

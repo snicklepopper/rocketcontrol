@@ -1,5 +1,5 @@
 {
-    "board": "arduino:samd:mkrwifi1010",
+    "board": "arduino:samd:nano_33_iot",
     "sketch": "rocket_telemetry.ino",
-    "port": "COM9"
+    "port": "COM13"
 }

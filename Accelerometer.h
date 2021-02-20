@@ -1,13 +1,8 @@
 #ifndef __accelerometer_h
 #define __accelerometer_h
 
-// Adafruit library
-#include <Adafruit_LSM6DSOX.h>
-
 
 struct Accelerometer {
-    Adafruit_LSM6DSOX   m_sox;          // The accelerometer
-
     float               m_base_accel_x; // Acceleration along x axis - offset value
     float               m_base_accel_y; // Acceleration along y axis - offset value
     float               m_base_accel_z; // Acceleration along z axis - offset value

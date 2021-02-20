@@ -1,5 +1,8 @@
 #include "Accelerometer.h"
 
+// IMU built into Nano 33 IOT
+#include <Arduino_LSM6DS3.h>
+
 // Sprint/Sprintln
 #include "my_trace.h"
 
@@ -19,14 +22,18 @@ Accelerometer::Accelerometer()
 // Initialise
 void Accelerometer::init()
 {
-    Sprint("Starting acceleromter");
-    if (!m_sox.begin_I2C()) {
-        while (1) {
-            Sprint(".");
-            delay(10);
-        }
+    Sprintln("Starting acceleromter");
+    if (!IMU.begin()) 
+    {
+        Sprintln("\nFailed to started acceleromter.");
     }
-    Sprintln("\nStarted acceleromter.");
+    else
+    {
+        Sprintln("\nStarted acceleromter.");
+        Sprintln("Accelerometer sample rate = ");
+        Sprintln(IMU.accelerationSampleRate());
+        Sprintln(" Hz");
+    }
 }
 
 // Read values
@@ -38,148 +45,36 @@ void Accelerometer::read(
     float&              rot_y,      // (O) Rotation around y axis
     float&              rot_z)      // (O) Rotation around z axis
 {
-    sensors_event_t accel;
-    sensors_event_t gyro;
-    sensors_event_t temp;
-    m_sox.getEvent(&accel, &gyro, &temp);
+    if (IMU.accelerationAvailable()) 
+    {
+        IMU.readAcceleration(accel_x, accel_y, accel_z);
+        Sprintln("Acceleration " + String(accel_x) + ", " + String(accel_y) + ", " + String(accel_z));
+    }
 
-    accel_x = accel.acceleration.x - m_base_accel_x;
-    accel_y = accel.acceleration.y - m_base_accel_y;
-    accel_z = accel.acceleration.z - m_base_accel_z;
-    rot_x = gyro.gyro.x - m_base_rot_x;
-    rot_y = gyro.gyro.y - m_base_rot_y;
-    rot_z = gyro.gyro.z - m_base_rot_z;
+    if (IMU.gyroscopeAvailable())
+    {
+        IMU.readGyroscope(rot_x, rot_y, rot_z);
+        Sprintln("Gyroscope " + String(rot_x) + ", " + String(rot_y) + ", " + String(rot_z));
+    }
+
+    // Adjust for the zero value
+    accel_x -= m_base_accel_x;
+    accel_y -= m_base_accel_y;
+    accel_z -= m_base_accel_z;
+    rot_x -= m_base_rot_x;
+    rot_y -= m_base_rot_y;
+    rot_z -= m_base_rot_z;
 }
 
 // Store current readings as zero 
 void Accelerometer::zero()
 {
-    sensors_event_t accel;
-    sensors_event_t gyro;
-    sensors_event_t temp;
-    m_sox.getEvent(&accel, &gyro, &temp);
-    m_base_accel_x = accel.acceleration.x;
-    m_base_accel_y = accel.acceleration.y;
-    m_base_accel_z = accel.acceleration.z;
-    m_base_rot_x = gyro.gyro.x;
-    m_base_rot_y = gyro.gyro.y;
-    m_base_rot_z = gyro.gyro.z;
+    float accel_x, accel_y, accel_z, rot_x, rot_y, rot_z;
+    read(accel_x, accel_y, accel_z, rot_x, rot_y, rot_z);
+    m_base_accel_x += accel_x;
+    m_base_accel_y += accel_y;
+    m_base_accel_z += accel_z;
+    m_base_rot_x += rot_x;
+    m_base_rot_y += rot_y;
+    m_base_rot_z += rot_z;
 }
-
-
-#if 0
-    // sox.setAccelRange(LSM6DS_ACCEL_RANGE_2_G);
-    Serial.print("Accelerometer range set to: ");
-    switch (sox.getAccelRange()) {
-    case LSM6DS_ACCEL_RANGE_2_G:
-        Serial.println("+-2G");
-        break;
-    case LSM6DS_ACCEL_RANGE_4_G:
-        Serial.println("+-4G");
-        break;
-    case LSM6DS_ACCEL_RANGE_8_G:
-        Serial.println("+-8G");
-        break;
-    case LSM6DS_ACCEL_RANGE_16_G:
-        Serial.println("+-16G");
-        break;
-    }
-    
-    // sox.setGyroRange(LSM6DS_GYRO_RANGE_250_DPS );
-    Serial.print("Gyro range set to: ");
-    switch (sox.getGyroRange()) {
-    case LSM6DS_GYRO_RANGE_125_DPS:
-        Serial.println("125 degrees/s");
-        break;
-    case LSM6DS_GYRO_RANGE_250_DPS:
-        Serial.println("250 degrees/s");
-        break;
-    case LSM6DS_GYRO_RANGE_500_DPS:
-        Serial.println("500 degrees/s");
-        break;
-    case LSM6DS_GYRO_RANGE_1000_DPS:
-        Serial.println("1000 degrees/s");
-        break;
-    case LSM6DS_GYRO_RANGE_2000_DPS:
-        Serial.println("2000 degrees/s");
-        break;
-    case ISM330DHCX_GYRO_RANGE_4000_DPS:
-        break; // unsupported range for the DSOX
-    }
-    
-    // sox.setAccelDataRate(LSM6DS_RATE_12_5_HZ);
-    Serial.print("Accelerometer data rate set to: ");
-    switch (sox.getAccelDataRate()) {
-    case LSM6DS_RATE_SHUTDOWN:
-        Serial.println("0 Hz");
-        break;
-    case LSM6DS_RATE_12_5_HZ:
-        Serial.println("12.5 Hz");
-        break;
-    case LSM6DS_RATE_26_HZ:
-        Serial.println("26 Hz");
-        break;
-    case LSM6DS_RATE_52_HZ:
-        Serial.println("52 Hz");
-        break;
-    case LSM6DS_RATE_104_HZ:
-        Serial.println("104 Hz");
-        break;
-    case LSM6DS_RATE_208_HZ:
-        Serial.println("208 Hz");
-        break;
-    case LSM6DS_RATE_416_HZ:
-        Serial.println("416 Hz");
-        break;
-    case LSM6DS_RATE_833_HZ:
-        Serial.println("833 Hz");
-        break;
-    case LSM6DS_RATE_1_66K_HZ:
-        Serial.println("1.66 KHz");
-        break;
-    case LSM6DS_RATE_3_33K_HZ:
-        Serial.println("3.33 KHz");
-        break;
-    case LSM6DS_RATE_6_66K_HZ:
-        Serial.println("6.66 KHz");
-        break;
-    }
-    
-    // sox.setGyroDataRate(LSM6DS_RATE_12_5_HZ);
-    Serial.print("Gyro data rate set to: ");
-    switch (sox.getGyroDataRate()) {
-    case LSM6DS_RATE_SHUTDOWN:
-        Serial.println("0 Hz");
-        break;
-    case LSM6DS_RATE_12_5_HZ:
-        Serial.println("12.5 Hz");
-        break;
-    case LSM6DS_RATE_26_HZ:
-        Serial.println("26 Hz");
-        break;
-    case LSM6DS_RATE_52_HZ:
-        Serial.println("52 Hz");
-        break;
-    case LSM6DS_RATE_104_HZ:
-        Serial.println("104 Hz");
-        break;
-    case LSM6DS_RATE_208_HZ:
-        Serial.println("208 Hz");
-        break;
-    case LSM6DS_RATE_416_HZ:
-        Serial.println("416 Hz");
-        break;
-    case LSM6DS_RATE_833_HZ:
-        Serial.println("833 Hz");
-        break;
-    case LSM6DS_RATE_1_66K_HZ:
-        Serial.println("1.66 KHz");
-        break;
-    case LSM6DS_RATE_3_33K_HZ:
-        Serial.println("3.33 KHz");
-        break;
-    case LSM6DS_RATE_6_66K_HZ:
-        Serial.println("6.66 KHz");
-        break;
-    }
-#endif
